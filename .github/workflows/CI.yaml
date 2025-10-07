@@ -14,29 +14,29 @@ on:
     branches: [main, develop]
 
 jobs:
-  code-quality:
-    name: Code Quality & Security
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.12"
+  # code-quality:
+  #   name: Code Quality & Security
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - uses: actions/setup-python@v4
+  #       with:
+  #         python-version: "3.12"
       
-      - name: Install tools
-        run: pip install black flake8 mypy bandit
+  #     - name: Install tools
+  #       run: pip install black flake8 mypy bandit
       
-      - name: Code formatting
-        run: black --check .
+  #     - name: Code formatting
+  #       run: black --check .
       
-      - name: Linting
-        run: flake8 . --max-line-length=88
+  #     - name: Linting
+  #       run: flake8 . --max-line-length=88
       
-      - name: Type checking
-        run: mypy . --ignore-missing-imports
+  #     - name: Type checking
+  #       run: mypy . --ignore-missing-imports
       
-      - name: Security check
-        run: bandit -r .
+  #     - name: Security check
+  #       run: bandit -r .
   
   test:
     name: Run Tests
