@@ -3,9 +3,10 @@ from typing import List, Optional
 from datetime import datetime, date
 from decimal import Decimal
 import uuid
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, Numeric, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, Numeric, Text, ForeignKey, BigInteger
 from sqlalchemy.dialects.postgresql import ARRAY, BYTEA, UUID
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from database_connection import Base
 
 class UserBase(BaseModel):
@@ -96,7 +97,6 @@ class UserModel(Base):
 
     trackings = relationship("TrackingModel", back_populates="user")
 
-
 class CodeModel(Base):
     __tablename__ = "codes"
 
@@ -105,7 +105,6 @@ class CodeModel(Base):
     session = Column(UUID(as_uuid=True), default=uuid.uuid4, nullable=False)
     expires_at = Column(DateTime, nullable=True)
     issued_at = Column(DateTime, default=datetime.utcnow)
-
 
 class TrackingModel(Base):
     __tablename__ = "trackings"
@@ -116,3 +115,17 @@ class TrackingModel(Base):
     logged_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("UserModel", back_populates="trackings")
+
+class ImageMetadata(Base):
+    __tablename__ = "image_metadata"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    filename = Column(String, nullable=False)  # UUID filename
+    original_filename = Column(String, nullable=False)  # Original name
+    object_name = Column(String, nullable=False, unique=True)  # Full MinIO path
+    size = Column(BigInteger, nullable=False)  # File size in bytes
+    content_type = Column(String, nullable=False)  # MIME type
+    bucket = Column(String, nullable=False)  # MinIO bucket name
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())

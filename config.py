@@ -19,3 +19,10 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 GOOGLE_PROJECT_ID = os.getenv("GOOGLE_PROJECT_ID", "")
+
+#MinIO
+MINIO_ENDPOINT: str = os.getenv("MINIO_ENDPOINT", "localhost:9000")
+MINIO_ACCESS_KEY: str = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+MINIO_SECRET_KEY: str = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+MINIO_BUCKET_NAME: str = os.getenv("MINIO_BUCKET_NAME", "fitora--test-_IAMGE_images")
+MINIO_SECURE: bool = os.getenv("MINIO_SECURE", "False") == "True"

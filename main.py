@@ -6,6 +6,7 @@ from database import Base
 from auth import router as auth_router
 from sms_api import router as sms_router
 from profile_api import router as profile_router
+from image_api import router as image_router
 import config
 from contextlib import asynccontextmanager
 
@@ -18,6 +19,7 @@ app = FastAPI(
 app.include_router(auth_router)
 app.include_router(sms_router)
 app.include_router(profile_router)
+app.include_router(image_router)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -30,3 +32,7 @@ async def lifespan(app: FastAPI):
 @app.get("/")
 async def read_root():
     return {"Hello": "World", "environment": config.ENVIRONMENT}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
