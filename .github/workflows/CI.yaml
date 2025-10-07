@@ -10,41 +10,47 @@ name: Fitora CI
 on:
   push:
     branches: [main, production]
-  pull-request:
+  pull_request:
     branches: [main, develop]
-  #schedule:
-  #  - crone: '0 0 * * 0'
 
 jobs:
-  test-and-code-quality:
-    name: Code quality & style
+  code-quality:
+    name: Code Quality & Security
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Set up code 
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
-      - with: 
-        python-version: '3.12'
-
-      - name: Install dependencies
-        run: |
-          pip install pytest pytest-cov black flake8 mypy bandit
-          pip install -r requirements
+        with:
+          python-version: "3.12"
+      
+      - name: Install tools
+        run: pip install black flake8 mypy bandit
       
       - name: Code formatting
         run: black --check .
-
+      
       - name: Linting
         run: flake8 . --max-line-length=88
       
       - name: Type checking
         run: mypy . --ignore-missing-imports
       
-      - name: Security check 
+      - name: Security check
         run: bandit -r .
-
+  
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+      
+      - name: Install dependencies
+        run: |
+          pip install pytest pytest-cov
+          pip install -r requirements.txt
+      
       - name: Run tests with coverage
         run: pytest --cov=. --cov-report=term --cov-fail-under=80
