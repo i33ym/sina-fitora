@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'channels',
     'users',
     'meals',
+    'images'
 ]
 
 MIDDLEWARE = [
@@ -119,3 +120,9 @@ CHANNEL_LAYERS = {
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+MINIO_ENDPOINT = os.getenv('MINIO_ENDPOINT', 'localhost:9000')
+MINIO_ACCESS_KEY = os.getenv('MINIO_ACCESS_KEY', 'minioadmin')
+MINIO_SECRET_KEY = os.getenv('MINIO_SECRET_KEY', 'minioadmin')
+MINIO_BUCKET_NAME = os.getenv('MINIO_BUCKET_NAME', 'fitora-images')
+MINIO_SECURE = os.getenv('MINIO_SECURE', 'False') == 'True'

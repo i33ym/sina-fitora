@@ -6,7 +6,7 @@ from database import Base
 from auth import router as auth_router
 from sms_api import router as sms_router
 from profile_api import router as profile_router
-from image_api import router as image_router
+from minio_api import router as image_router
 import config
 from contextlib import asynccontextmanager
 
