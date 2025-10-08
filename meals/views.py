@@ -136,12 +136,13 @@
 
 
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, parser_classes
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter, inline_serializer
 from datetime import datetime
 from .models import Meal
 from .serializers import MealSerializer, MealCreateSerializer, MealListSerializer
@@ -152,7 +153,29 @@ class MealPagination(PageNumberPagination):
     max_page_size = 100
 
 @extend_schema(
-    request=MealCreateSerializer,
+    request={
+        'multipart/form-data': {
+            'type': 'object',
+            'properties': {
+                'image': {
+                    'type': 'string',
+                    'format': 'binary',
+                    'description': 'Meal image file'
+                },
+                'foods_data': {
+                    'type': 'object',
+                    'description': 'JSON object with foods array',
+                    'example': {"foods": [{"name": "Apple", "calories": 95}]}
+                },
+                'meal_time': {
+                    'type': 'string',
+                    'enum': ['breakfast', 'lunch', 'dinner', 'snack'],
+                    'description': 'Meal time'
+                }
+            },
+            'required': ['foods_data']
+        }
+    },
     responses={
         200: OpenApiResponse(response=MealListSerializer(many=True), description='List of meals'),
         201: OpenApiResponse(response=MealSerializer, description='Meal created successfully'),
@@ -161,6 +184,7 @@ class MealPagination(PageNumberPagination):
     tags=['Meals']
 )
 @api_view(['GET', 'POST'])
+@parser_classes([MultiPartParser, FormParser])  # Remove JSONParser - only multipart
 @permission_classes([IsAuthenticated])
 def meals(request):
     if request.method == 'GET':

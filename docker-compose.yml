@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: fitora_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: fitora
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: jiji
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fitora_network
+
+  # Redis for Django Channels
+  redis:
+    image: redis:7-alpine
+    container_name: fitora_redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fitora_network
+
+  # MinIO for file storage
+  minio:
+    image: minio/minio:latest
+    container_name: fitora_minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - fitora_network
+
+  # Django Application
+  web:
+    build: .
+    container_name: fitora_web
+    command: sh -c "python manage.py migrate && daphne -b 0.0.0.0 -p 8000 fitora.asgi:application"
+    volumes:
+      - .:/app
+      - media_volume:/app/media
+      - static_volume:/app/staticfiles
+    ports:
+      - "8000:8000"
+    environment:
+      # Database
+      DATABASE_NAME: fitora
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: jiji
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+      
+      # Django
+      SECRET_KEY: django-insecure-change-this-in-production-123456789
+      DEBUG: "True"
+      
+      # MinIO
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET_NAME: fitora-images
+      MINIO_SECURE: "False"
+      
+      # OpenAI
+      OPENAI_API_KEY: sk-dummy-key-for-testing
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - fitora_network
+
+volumes:
+  postgres_data:
+  minio_data:
+  media_volume:
+  static_volume:
+
+networks:
+  fitora_network:
+    driver: bridge
