@@ -24,5 +24,5 @@ GOOGLE_PROJECT_ID = os.getenv("GOOGLE_PROJECT_ID", "")
 MINIO_ENDPOINT: str = os.getenv("MINIO_ENDPOINT", "localhost:9000")
 MINIO_ACCESS_KEY: str = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET_KEY: str = os.getenv("MINIO_SECRET_KEY", "minioadmin")
-MINIO_BUCKET_NAME: str = os.getenv("MINIO_BUCKET_NAME", "fitora--test-_IAMGE_images")
+MINIO_BUCKET_NAME: str = os.getenv("MINIO_BUCKET_NAME", "fitoraimages")
 MINIO_SECURE: bool = os.getenv("MINIO_SECURE", "False") == "True"
