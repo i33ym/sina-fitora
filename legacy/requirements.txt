@@ -1,0 +1,13 @@
+uvicorn
+sqlalchemy
+asyncpg
+pydantic
+python-dotenv
+fastapi
+python-jose[cryptography]
+passlib[bcrypt]
+greenlet
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+requests
