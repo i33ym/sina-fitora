@@ -1,14 +1,14 @@
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from database_connection import get_db
 from minio_service import minio_service
 from auth_dependencies import get_current_user
-from database import User
+from database import User, ImageMetadata
 from typing import List
 from pydantic import BaseModel
 from io import BytesIO
-from database import ImageMetadata
 
 
 router = APIRouter(prefix="/images", tags=["Images"])
@@ -21,60 +21,68 @@ class ImageResponse(BaseModel):
     size: int
     content_type: str
     url: str
-    user_id: int
 
 class ImageListResponse(BaseModel):
     images: List[ImageResponse]
     total: int
 
-@router.post("/upload", response_model=ImageResponse)
+@router.post("/upload", response_model=dict)
 async def upload_image(
-    file: UploadFile,
+    file: UploadFile = File(...),
     folder: str = "images",
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    upload_result = await minio_service.upload_image(
+    """
+    Upload an image and save metadata to database
+    Returns: UUID of the uploaded image
+    """
+    # Upload to MinIO - now returns only UUID
+    image_uuid = await minio_service.upload_image(
         file=file,
         folder=folder,
         user_id=current_user.id
     )
-
     
+    file_extension = f".{file.filename.split('.')[-1].lower()}"
+    unique_filename = f"{image_uuid}{file_extension}"
+    object_name = f"{folder}/user_{current_user.id}/{unique_filename}"
+    
+    await file.seek(0)  # Reset file pointer
+    file_content = await file.read()
+    file_size = len(file_content)
+    
+    # Save metadata to database
     image_metadata = ImageMetadata(
-        filename=upload_result["filename"],
-        original_filename=upload_result["original_filename"],
-        object_name=upload_result["object_name"],
-        size=upload_result["size"],
-        content_type=upload_result["content_type"],
-        bucket=upload_result["bucket"],
-        user_id=current_user.id
+        filename=unique_filename,
+        original_filename=file.filename,
+        object_name=object_name,
+        size=file_size,
+        content_type=file.content_type
     )
-
+    
     db.add(image_metadata)
     await db.commit()
     await db.refresh(image_metadata)
-
-    # generate image
-    url = minio_service.get_image_url(upload_result["object_name"])
-
+    
+    print(f"✓ Saved to database: ID={image_metadata.id}, UUID={image_uuid}")
+    
     return {
-        **upload_result,
+        "uuid": image_uuid,
         "id": image_metadata.id,
-        "url": url,
-        "user_id": current_user.id
+        "message": "Image uploaded successfully"
     }
-
 
 
 @router.get("/{image_id}", response_class=StreamingResponse)
 async def get_image(
     image_id: int,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    from database import ImageMetadata
-    from sqlalchemy import select
-    
+    """
+    Get image by ID and stream it
+    """
     # Get metadata from database
     result = await db.execute(
         select(ImageMetadata).where(ImageMetadata.id == image_id)
@@ -92,7 +100,7 @@ async def get_image(
         BytesIO(image_data),
         media_type=image.content_type,
         headers={
-            "Content-Disposition": f"inline; filename={image.filename}"
+            "Content-Disposition": f"inline; filename={image.original_filename}"
         }
     )
 
@@ -102,12 +110,11 @@ async def list_my_images(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    
-    from database import ImageMetadata
-    from sqlalchemy import select
-    
+    """
+    List all images for the current user
+    """
     result = await db.execute(
-        select(ImageMetadata).where(ImageMetadata.user_id == current_user.id)
+        select(ImageMetadata).where(ImageMetadata.id == current_user.id)
     )
     images = result.scalars().all()
     
@@ -122,11 +129,38 @@ async def list_my_images(
             "object_name": img.object_name,
             "size": img.size,
             "content_type": img.content_type,
-            "url": url,
-            "user_id": img.user_id
+            "url": url
         })
     
     return {
         "images": image_list,
         "total": len(image_list)
     }
+
+
+@router.delete("/{image_id}")
+async def delete_image(
+    image_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Delete an image
+    """
+    # Get image from database
+    result = await db.execute(
+        select(ImageMetadata).where(ImageMetadata.id == image_id)
+    )
+    image = result.scalar_one_or_none()
+    
+    if not image:
+        raise HTTPException(status_code=404, detail="Image not found")
+    
+    # Delete from MinIO
+    minio_service.delete_image(image.object_name)
+    
+    # Delete from database
+    await db.delete(image)
+    await db.commit()
+    
+    return {"message": "Image deleted successfully"}

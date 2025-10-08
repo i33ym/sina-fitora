@@ -115,17 +115,3 @@ class TrackingModel(Base):
     logged_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("UserModel", back_populates="trackings")
-
-class ImageMetadata(Base):
-    __tablename__ = "image_metadata"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    filename = Column(String, nullable=False)  # UUID filename
-    original_filename = Column(String, nullable=False)  # Original name
-    object_name = Column(String, nullable=False, unique=True)  # Full MinIO path
-    size = Column(BigInteger, nullable=False)  # File size in bytes
-    content_type = Column(String, nullable=False)  # MIME type
-    bucket = Column(String, nullable=False)  # MinIO bucket name
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
