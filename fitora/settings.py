@@ -9,6 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
+USE_MINIO = os.getenv('USE_MINIO', 'True') == 'True'
 ALLOWED_HOSTS = ['*'] if DEBUG else []
 
 INSTALLED_APPS = [
@@ -25,7 +26,8 @@ INSTALLED_APPS = [
     'channels',
     'users',
     'meals',
-    'images'
+    'images',
+    'storages'
 ]
 
 MIDDLEWARE = [
@@ -118,10 +120,47 @@ CHANNEL_LAYERS = {
     },
 }
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+USE_MINIO = os.getenv('USE_MINIO', 'True') == 'True'
 
-MINIO_ENDPOINT = os.getenv('MINIO_ENDPOINT', 'localhost:9000')
+if USE_MINIO:
+    # MinIO Configuration
+    AWS_ACCESS_KEY_ID = os.getenv('MINIO_ACCESS_KEY', 'minioadmin')
+    AWS_SECRET_ACCESS_KEY = os.getenv('MINIO_SECRET_KEY', 'minioadmin')
+    AWS_STORAGE_BUCKET_NAME = os.getenv('MINIO_BUCKET_NAME', 'fitora-images')
+    AWS_S3_ENDPOINT_URL = f"http://{os.getenv('MINIO_ENDPOINT', 'minio:9000')}"
+    AWS_S3_USE_SSL = os.getenv('MINIO_SECURE', 'False') == 'True'
+    AWS_S3_REGION_NAME = None
+    AWS_DEFAULT_ACL = None
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_QUERYSTRING_AUTH = True
+    AWS_QUERYSTRING_EXPIRE = 3600
+    AWS_AUTO_CREATE_BUCKET = True
+    
+    # NEW: Use STORAGES setting instead of DEFAULT_FILE_STORAGE
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+else:
+    # Use local file storage (fallback)
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = BASE_DIR / 'media'
+    
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+
+# Keep these for your custom minio_service.py
+MINIO_ENDPOINT = os.getenv('MINIO_ENDPOINT', 'minio:9000')
 MINIO_ACCESS_KEY = os.getenv('MINIO_ACCESS_KEY', 'minioadmin')
 MINIO_SECRET_KEY = os.getenv('MINIO_SECRET_KEY', 'minioadmin')
 MINIO_BUCKET_NAME = os.getenv('MINIO_BUCKET_NAME', 'fitora-images')
