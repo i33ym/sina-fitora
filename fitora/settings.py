@@ -27,7 +27,8 @@ INSTALLED_APPS = [
     'users',
     'meals',
     'images',
-    'storages'
+    'storages', 
+    'chatbot'
 ]
 
 MIDDLEWARE = [
