@@ -87,7 +87,7 @@ services:
       MINIO_SECURE: "False"
       
       # OpenAI
-      OPENAI_API_KEY: sk-dummy-key-for-testing
+      OPENAI_API_KEY: OPENAI_API_KEY
     depends_on:
       db:
         condition: service_healthy
