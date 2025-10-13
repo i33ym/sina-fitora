@@ -28,14 +28,11 @@ class ChatSession(models.Model):
     
     AI_MODEL_CHOICES = [
         ('gpt-4', 'GPT-4'),
-        ('gpt-3.5-turbo', 'GPT-3.5 Turbo'),
-        ('claude-3-opus', 'Claude 3 Opus'),
-        ('claude-3-sonnet', 'Claude 3 Sonnet'),
     ]
     ai_model = models.CharField(
         max_length=20,
         choices=AI_MODEL_CHOICES,
-        default='gpt-4',
+        default='gpt-4-mini',
         verbose_name='AI Model'
     )
     
@@ -95,6 +92,14 @@ class Message(models.Model):
         blank=True,
         verbose_name='Token soni'
     )
+
+    input_tokens = models.IntegerField(default=0, help_text="Tokens in request")
+    output_tokens = models.IntegerField(default=0, help_text="Tokens in response")
+    total_tokens = models.IntegerField(default=0, help_text="Total tokens used")
+    response_time_ms = models.IntegerField(default=0, help_text="AI response time in ms")
+    model_used = models.CharField(max_length=50, default='', help_text="AI model used")
+    finish_reason = models.CharField(max_length=20, default='', help_text="Why generation stopped")
+  
     
     class Meta:
         ordering = ['created_at']

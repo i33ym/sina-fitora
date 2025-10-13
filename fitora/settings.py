@@ -166,3 +166,18 @@ MINIO_ACCESS_KEY = os.getenv('MINIO_ACCESS_KEY', 'minioadmin')
 MINIO_SECRET_KEY = os.getenv('MINIO_SECRET_KEY', 'minioadmin')
 MINIO_BUCKET_NAME = os.getenv('MINIO_BUCKET_NAME', 'fitora-images')
 MINIO_SECURE = os.getenv('MINIO_SECURE', 'False') == 'True'
+
+
+# Redis Configuration (for caching)
+REDIS_HOST = os.getenv('REDIS_HOST', default='localhost')
+REDIS_PORT = os.getenv('REDIS_PORT', default=6379)
+REDIS_DB = os.getenv('REDIS_DB', default=0)
+
+# Chatbot Settings
+CHATBOT_MAX_HISTORY_MESSAGES = 20
+CHATBOT_MAX_TOKENS = 8000
+CHATBOT_CACHE_TTL = 3600  # 1 hour
+
+# Rate Limiting
+RATELIMIT_ENABLE = True
+RATELIMIT_USE_CACHE = 'default'

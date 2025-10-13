@@ -60,3 +60,8 @@ uritemplate==4.2.0
 urllib3==2.5.0
 zope.interface==8.0.1
 minio
+django-redis
+tiktoken
+django-ratelimit
+reportlab 
+psycopg2-binary 
