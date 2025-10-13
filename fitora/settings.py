@@ -9,7 +9,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
-USE_MINIO = os.getenv('USE_MINIO', 'True') == 'True'
 ALLOWED_HOSTS = ['*'] if DEBUG else []
 
 INSTALLED_APPS = [
@@ -27,8 +26,9 @@ INSTALLED_APPS = [
     'users',
     'meals',
     'images',
-    'storages', 
-    'chatbot'
+    'storages',
+    'chatbot',
+    'dietologists'
 ]
 
 MIDDLEWARE = [
