@@ -59,6 +59,3 @@ typing_extensions==4.15.0
 uritemplate==4.2.0
 urllib3==2.5.0
 zope.interface==8.0.1
-minio
-django-storages[s3]
-boto3
