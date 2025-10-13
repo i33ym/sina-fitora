@@ -65,3 +65,4 @@ tiktoken
 django-ratelimit
 reportlab 
 psycopg2-binary 
+django-storages 

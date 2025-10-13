@@ -1,114 +1,65 @@
+# chatbot/models.py
+
 from django.db import models
-from django.contrib.auth import get_user_model
-import uuid
+from django.utils import timezone
 
-User = get_user_model()
+class Session(models.Model):
+    session_id = models.AutoField(primary_key=True)
+    title = models.CharField(max_length=255, help_text="Auto-generated conversation title")
+    created_at = models.DateTimeField(default=timezone.now)
 
-
-class ChatSession(models.Model):
-    """Chat session modeli"""
-    
-    id = models.UUIDField(
-        primary_key=True, 
-        default=uuid.uuid4, 
-        editable=False
-    )
-    user = models.ForeignKey(
-        User, 
-        on_delete=models.CASCADE,
-        related_name='chat_sessions',
-        verbose_name='Foydalanuvchi'
-    )
-    
-    title = models.CharField(
-        max_length=255, 
-        default="Yangi Suhbat",
-        verbose_name='Sarlavha'
-    )
-    
-    AI_MODEL_CHOICES = [
-        ('gpt-4', 'GPT-4'),
-    ]
-    ai_model = models.CharField(
-        max_length=20,
-        choices=AI_MODEL_CHOICES,
-        default='gpt-4-mini',
-        verbose_name='AI Model'
-    )
-    
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Yaratilgan')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Yangilangan')
-    is_active = models.BooleanField(default=True, verbose_name='Aktiv')
-    
     class Meta:
-        ordering = ['-updated_at']
-        db_table = 'chat_sessions'
-        verbose_name = 'Chat Session'
-        verbose_name_plural = 'Chat Sessions'
-        indexes = [
-            models.Index(fields=['-updated_at']),
-            models.Index(fields=['user', '-updated_at']),
-        ]
-        
-    def __str__(self):
-        return f"{self.title} - {self.user.username}"
+        db_table = 'session'
+        ordering = ['-created_at']
     
-    @property
-    def message_count(self):
-        """Xabarlar soni"""
-        return self.messages.count()
+    def __str__(self):
+        return f"Session {self.session_id}: {self.title}"
 
 
 class Message(models.Model):
-    """Xabar modeli"""
+    """
+    Enhanced Message model with metadata for production monitoring
+    """
     
-    id = models.UUIDField(
-        primary_key=True, 
-        default=uuid.uuid4, 
-        editable=False
-    )
+    AUTHOR_CHOICES = [
+        ('user', 'User'),
+        ('ai', 'AI'),
+    ]
+    
+    message_id = models.AutoField(primary_key=True)
     session = models.ForeignKey(
-        ChatSession,
+        Session, 
         on_delete=models.CASCADE,
         related_name='messages',
-        verbose_name='Session'
+        db_column='session_id'
     )
-    
-    ROLE_CHOICES = [
-        ('user', 'User'),
-        ('assistant', 'Assistant'),
-        ('system', 'System'),
-    ]
-    role = models.CharField(
+    author = models.CharField(
         max_length=10, 
-        choices=ROLE_CHOICES,
-        verbose_name='Rol'
+        choices=AUTHOR_CHOICES,
+        help_text="Who sent this message: user or ai"
     )
-    content = models.TextField(verbose_name='Matn')
+    message = models.TextField(help_text="The actual message content")
+    user_id = models.IntegerField(
+        help_text="User ID from the existing system"
+    )
+    created_at = models.DateTimeField(default=timezone.now)
     
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Yaratilgan')
-    tokens_used = models.IntegerField(
-        null=True, 
-        blank=True,
-        verbose_name='Token soni'
-    )
-
+    # ⚠️ NEW: Metadata fields for monitoring
     input_tokens = models.IntegerField(default=0, help_text="Tokens in request")
     output_tokens = models.IntegerField(default=0, help_text="Tokens in response")
     total_tokens = models.IntegerField(default=0, help_text="Total tokens used")
-    response_time_ms = models.IntegerField(default=0, help_text="AI response time in ms")
-    model_used = models.CharField(max_length=50, default='', help_text="AI model used")
-    finish_reason = models.CharField(max_length=20, default='', help_text="Why generation stopped")
-  
+    response_time_ms = models.IntegerField(default=0, help_text="AI response time in milliseconds")
+    model_used = models.CharField(max_length=50, default='', blank=True, help_text="AI model used")
     
     class Meta:
+        db_table = 'message'
         ordering = ['created_at']
-        db_table = 'chat_messages'
-        verbose_name = 'Xabar'
-        verbose_name_plural = 'Xabarlar'
         indexes = [
             models.Index(fields=['session', 'created_at']),
+            models.Index(fields=['user_id']),
+            models.Index(fields=['created_at']),
         ]
-        
+    
     def __str__(self):
-        return f"{self.role}: {self.content[:50]}..."
+        preview = self.message[:50] + "..." if len(self.message) > 50 else self.message
+        return f"{self.author}: {preview}"

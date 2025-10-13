@@ -4,8 +4,8 @@ from .views import (
     UserSessionsView,
     SessionDetailView,
     MessageHistoryView,
-    DeleteSessionView,
-    StreamMessageView
+    DeleteSessionView
+    #StreamMessageView
 )
 
 app_name = 'chatbot'
@@ -16,5 +16,5 @@ urlpatterns = [
     path('sessions/<int:session_id>/', SessionDetailView.as_view(), name='session_detail'),
     path('messages/', MessageHistoryView.as_view(), name='message_history'),
     path('sessions/<int:session_id>/delete/', DeleteSessionView.as_view(), name='delete_session'),
-    path('stream/', StreamMessageView.as_view(), name='stream_message'),
+    #path('stream/', StreamMessageView.as_view(), name='stream_message'),
 ]

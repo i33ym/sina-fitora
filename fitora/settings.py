@@ -39,6 +39,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'chatbot.middleware.rate_limit.RateLimitMiddleware'
 ]
 
 ROOT_URLCONF = 'fitora.urls'
@@ -169,14 +170,80 @@ MINIO_SECURE = os.getenv('MINIO_SECURE', 'False') == 'True'
 
 
 # Redis Configuration (for caching)
-REDIS_HOST = os.getenv('REDIS_HOST', default='localhost')
-REDIS_PORT = os.getenv('REDIS_PORT', default=6379)
-REDIS_DB = os.getenv('REDIS_DB', default=0)
+REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
+REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
+REDIS_DB = int(os.getenv('REDIS_DB', 0))
+REDIS_PASSWORD = os.getenv('REDIS_PASSWORD', None)
+
+# Django Cache (for rate limiting + chatbot caching)
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': f'redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'PASSWORD': REDIS_PASSWORD,
+        },
+        'KEY_PREFIX': 'fitora',
+        'TIMEOUT': 300,
+    }
+}
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [(REDIS_HOST, REDIS_PORT)],
+        },
+    },
+}
+
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-4')
 
 # Chatbot Settings
-CHATBOT_MAX_HISTORY_MESSAGES = 20
-CHATBOT_MAX_TOKENS = 8000
-CHATBOT_CACHE_TTL = 3600  # 1 hour
+CHATBOT_MAX_HISTORY_MESSAGES = int(os.getenv('CHATBOT_MAX_HISTORY_MESSAGES', 20))
+CHATBOT_MAX_TOKENS = int(os.getenv('CHATBOT_MAX_TOKENS', 8000))
+CHATBOT_CACHE_TTL = int(os.getenv('CHATBOT_CACHE_TTL', 3600))
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '[{levelname}] {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '[{levelname}] {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'chatbot.log'),
+            'maxBytes': 1024 * 1024 * 10,  # 10 MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'chatbot': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+    },
+}
 
 # Rate Limiting
 RATELIMIT_ENABLE = True
