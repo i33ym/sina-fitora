@@ -26,3 +26,12 @@ MINIO_ACCESS_KEY: str = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET_KEY: str = os.getenv("MINIO_SECRET_KEY", "minioadmin")
 MINIO_BUCKET_NAME: str = os.getenv("MINIO_BUCKET_NAME", "fitoraimages")
 MINIO_SECURE: bool = os.getenv("MINIO_SECURE", "False") == "True"
+
+REDIS_HOST= os.getenv('REDIS_HOST', 'localhost')
+REDIS_PORT=os.getenv('REDIS_PORT', 6379)
+REDIS_PASSWORD=os.getenv('REDIS_PASSWORD', None)
+REDIS_DECODE_RESPONSE=os.getenv(True),
+
+MAX_MESSAGES = os.getenv('MAX_MESSAGES', 20)
+CACHE_EXPIRY = os.getenv('CACHE_EXPIRY', 3600)
+PORT =os.getenv('PORT', 5000)

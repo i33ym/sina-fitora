@@ -1,50 +1,64 @@
-version: '3.8'
-
 services:
+  # ============================================
   # PostgreSQL Database
+  # ============================================
   db:
     image: postgres:16-alpine
     container_name: fitora_db
+    restart: unless-stopped
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups  # For database backups
     environment:
-      POSTGRES_DB: fitora
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: jiji
+      POSTGRES_DB: ${DATABASE_NAME:-fitora}
+      POSTGRES_USER: ${DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-changeme}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
     ports:
-      - "5432:5432"
+      - "${DATABASE_PORT:-5432}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
     networks:
       - fitora_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # Redis for Django Channels
+  # ============================================
+  # Redis (for Django Channels + Chatbot Cache)
+  # ============================================
   redis:
     image: redis:7-alpine
     container_name: fitora_redis
     ports:
       - "6379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      interval: 5s
+      timeout: 3s
       retries: 5
     networks:
       - fitora_network
 
-  # MinIO for file storage
+  # ============================================
+  # MinIO (S3-compatible storage)
+  # ============================================
   minio:
     image: minio/minio:latest
     container_name: fitora_minio
+    restart: unless-stopped
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
     volumes:
       - minio_data:/data
     command: server /data --console-address ":9001"
@@ -53,41 +67,71 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
+      start_period: 10s
     networks:
       - fitora_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # Django Application
+  # ============================================
+  # Django Application (with Daphne for ASGI)
+  # ============================================
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - PYTHON_VERSION=3.11
     container_name: fitora_web
-    command: sh -c "python manage.py migrate && daphne -b 0.0.0.0 -p 8000 fitora.asgi:application"
+    restart: unless-stopped
+    command: sh -c "
+        daphne -b 0.0.0.0 -p 8000 fitora.asgi:application
+      "
     volumes:
       - .:/app
       - media_volume:/app/media
       - static_volume:/app/staticfiles
+      - logs_volume:/app/logs  # For chatbot logs
     ports:
-      - "8000:8000"
+      - "${WEB_PORT:-8000}:8000"
     environment:
       # Database
-      DATABASE_NAME: fitora
-      DATABASE_USER: postgres
-      DATABASE_PASSWORD: jiji
+      DATABASE_NAME: ${DATABASE_NAME:-fitora}
+      DATABASE_USER: ${DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-changeme}
       DATABASE_HOST: db
       DATABASE_PORT: 5432
       
       # Django
-      SECRET_KEY: django-insecure-change-this-in-production-123456789
-      DEBUG: "True"
+      SECRET_KEY: ${SECRET_KEY:-django-insecure-please-change-this}
+      DEBUG: ${DEBUG:-True}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
+      
+      # Redis (for both Channels and Cache)
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: ${REDIS_DB:-0}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       
       # MinIO
       MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
-      MINIO_BUCKET_NAME: fitora-images
-      MINIO_SECURE: "False"
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-fitora-images}
+      MINIO_SECURE: ${MINIO_SECURE:-False}
+      USE_MINIO: ${USE_MINIO:-True}
       
-      # OpenAI
-      OPENAI_API_KEY: sk-dummy-key-for-testing
+      # OpenAI (for chatbot)
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4-turbo-preview}
+      
+      # Chatbot Settings
+      CHATBOT_MAX_HISTORY_MESSAGES: ${CHATBOT_MAX_HISTORY_MESSAGES:-20}
+      CHATBOT_MAX_TOKENS: ${CHATBOT_MAX_TOKENS:-8000}
+      CHATBOT_CACHE_TTL: ${CHATBOT_CACHE_TTL:-3600}
     depends_on:
       db:
         condition: service_healthy
@@ -95,15 +139,47 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     networks:
       - fitora_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
 
+# ============================================
+# Volumes (persistent data)
+# ============================================
 volumes:
   postgres_data:
+    driver: local
+  redis_data:  # NEW: Redis persistence
+    driver: local
   minio_data:
+    driver: local
   media_volume:
+    driver: local
   static_volume:
+    driver: local
+  logs_volume:  # NEW: Application logs
+    driver: local
 
+# ============================================
+# Networks
+# ============================================
 networks:
   fitora_network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+
+
+#docker exec -it fitora_web sh
