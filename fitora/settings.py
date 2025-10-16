@@ -28,7 +28,8 @@ INSTALLED_APPS = [
     'images',
     'storages',
     'chatbot',
-    'dietologists'
+    'dietologists',
+    'daily_limit_calculation'
 ]
 
 MIDDLEWARE = [

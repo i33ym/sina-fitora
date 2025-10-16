@@ -45,7 +45,9 @@ urlpatterns = [
     path('', include('users.urls')),
     path('', include('meals.urls')),
     path('', include('chatbot.urls')),
-    path('', include('dietologists.urls'))
+    path('', include('dietologists.urls')),
+    #path('api/daily-limits/', include('daily_limit_calculation.urls')),
+    path('', include('daily_limit_calculation.urls'))
     ]
 
 if settings.DEBUG:

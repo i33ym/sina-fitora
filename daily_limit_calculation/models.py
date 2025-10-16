@@ -1,5 +1,4 @@
 from django.db import models
-from django.contrib.postgres.fields import JSONField
 import uuid
 
 
@@ -16,7 +15,7 @@ class DailyIngredientsLimit(models.Model):
         related_name='daily_limits'
     )
     
-    ingredients_summary = JSONField(default=list)
+    ingredients_summary = models.JSONField(default=list)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
