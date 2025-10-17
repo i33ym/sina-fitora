@@ -56,7 +56,7 @@ class DailyLimitsCalculator:
         self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
         self.model = getattr(settings, 'OPENAI_MODEL', 'gpt-4')
     
-    def calculate_from_user(self, user) -> List[Dict[str, Any]]:
+    def calculate_from_user(self, user) -> Dict[str, float]:
         """
         Main entry point: Takes User object and generates personalized limits.
         Extracts survey data directly from User model fields.
@@ -245,23 +245,19 @@ Return ONLY the JSON object, no additional text.
 """
         return prompt
     
-    def _parse_ai_response(self, response_text: str) -> List[Dict[str, Any]]:
-        """
-        Parse AI response and extract JSON.
-        Handles cases where AI returns extra text around JSON.
-        """
+    def _parse_ai_response(self, response_text: str) -> Dict[str, float]:
+        """Parse AI response and convert to key-value format"""
         try:
-            # Try direct parsing first
             data = json.loads(response_text)
         except json.JSONDecodeError:
-            # Try extracting JSON from response if extra text present
+            import re
             json_match = re.search(r'\{[\s\S]*\}', response_text)
             if json_match:
                 data = json.loads(json_match.group())
             else:
                 raise ValueError(f"Could not parse JSON from response: {response_text}")
-        
-        # Validate and extract ingredients_summary
+    
+        # Extract ingredients_summary
         if 'ingredients_summary' not in data:
             raise ValueError("Response missing 'ingredients_summary' key")
         
@@ -270,7 +266,9 @@ Return ONLY the JSON object, no additional text.
         # Validate each ingredient
         if not isinstance(ingredients, list):
             raise ValueError("ingredients_summary must be a list")
-        
+    
+    # Convert to key-value format
+        ingredients_dict = {}
         for ingredient in ingredients:
             if not isinstance(ingredient, dict):
                 raise ValueError("Each ingredient must be a dictionary")
@@ -279,12 +277,12 @@ Return ONLY the JSON object, no additional text.
             
             # Convert daily_norm to float
             try:
-                ingredient['daily_norm'] = float(ingredient['daily_norm'])
+                ingredients_dict[ingredient['name']] = float(ingredient['daily_norm'])
             except (ValueError, TypeError):
                 raise ValueError(f"Invalid daily_norm for {ingredient.get('name')}")
-        
-        logger.debug(f"Successfully parsed {len(ingredients)} ingredients from AI response")
-        return ingredients
+    
+        logger.debug(f"Successfully parsed {len(ingredients_dict)} ingredients from AI response")
+        return ingredients_dict
     
     def get_fallback_limits(self, survey_data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
