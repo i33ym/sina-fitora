@@ -16,12 +16,12 @@ services:
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
     ports:
       - "${DATABASE_PORT:-5432}:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+    # healthcheck:
+    #   test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres}"]
+    #   interval: 10s
+    #   timeout: 5s
+    #   retries: 5
+    #   start_period: 10s
     networks:
       - fitora_network
     logging:
@@ -38,11 +38,11 @@ services:
     container_name: fitora_redis
     ports:
       - "6379:6379"
-    healthcheck:
-      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
+    # healthcheck:
+    #   test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+    #   interval: 5s
+    #   timeout: 3s
+    #   retries: 5
     networks:
       - fitora_network
 
@@ -62,12 +62,12 @@ services:
     volumes:
       - minio_data:/data
     command: server /data --console-address ":9001"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 20s
-      retries: 3
-      start_period: 10s
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+    #   interval: 30s
+    #   timeout: 20s
+    #   retries: 3
+    #   start_period: 10s
     networks:
       - fitora_network
     logging:
@@ -88,6 +88,7 @@ services:
     container_name: fitora_web
     restart: unless-stopped
     command: sh -c "
+        python manage.py migrate &&
         daphne -b 0.0.0.0 -p 8000 fitora.asgi:application
       "
     volumes:
@@ -132,19 +133,19 @@ services:
       CHATBOT_MAX_HISTORY_MESSAGES: ${CHATBOT_MAX_HISTORY_MESSAGES:-20}
       CHATBOT_MAX_TOKENS: ${CHATBOT_MAX_TOKENS:-8000}
       CHATBOT_CACHE_TTL: ${CHATBOT_CACHE_TTL:-3600}
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+    # depends_on:
+    #   db:
+    #     condition: service_healthy
+    #   redis:
+    #     condition: service_healthy
+    #   minio:
+    #     condition: service_healthy
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 40s
     networks:
       - fitora_network
     logging:
@@ -179,7 +180,3 @@ networks:
     ipam:
       config:
         - subnet: 172.20.0.0/16
-
-
-
-#docker exec -it fitora_web sh

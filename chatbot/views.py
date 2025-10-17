@@ -1,5 +1,3 @@
-# chatbot/views.py
-
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -12,6 +10,7 @@ from .serializers import (
     SessionDetailSerializer,
     MessageSerializer
 )
+from drf_spectacular.utils import extend_schema
 from .services.chat_service import chat_service
 from rest_framework.permissions import IsAuthenticated
 import logging
@@ -19,6 +18,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+@extend_schema(
+    tags=['Chat Bot']
+)
 class SendMessageView(APIView):
     """
     Send a message to the chatbot and get AI response
@@ -117,7 +119,9 @@ class SendMessageView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-
+@extend_schema(
+    tags=['Chat Bot']
+)
 class UserSessionsView(APIView):
     """
     Get all chat sessions for the authenticated user
@@ -157,7 +161,9 @@ class UserSessionsView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-
+@extend_schema(
+    tags=['Chat Bot']
+)
 class SessionDetailView(APIView):
     """
     Get detailed information about a specific session including all messages
@@ -206,7 +212,9 @@ class SessionDetailView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-
+@extend_schema(
+    tags=['Chat Bot']
+)
 class MessageHistoryView(APIView):
     """
     Get message history for a specific session
@@ -283,7 +291,9 @@ class MessageHistoryView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-
+@extend_schema(
+    tags=['Chat Bot']
+)
 class DeleteSessionView(APIView):
     """
     Delete a session and all its messages
